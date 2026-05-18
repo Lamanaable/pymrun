@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     name: Lint
@@ -54,29 +57,70 @@ jobs:
       - name: Run tests
         run: uv run --group dev tox -e py
 
-  semantic-release:
+  release:
     name: Semantic Release
     needs: [lint, test]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    concurrency:
+      group: ${{ github.workflow }}-release-${{ github.ref_name }}
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
-      - name: Checkout
+      - name: Setup | Checkout Repository on Release Branch
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.ref_name }}
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - name: Setup | Force release branch to be at workflow sha
+        run: |
+          git reset --hard ${{ github.sha }}
+
+      - name: Action | Semantic Version Release
+        id: release
+        uses: python-semantic-release/python-semantic-release@v10.5.3
         with:
-          version: "latest"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          git_committer_name: "github-actions"
+          git_committer_email: "actions@users.noreply.github.com"
 
-      - name: Set up Python
-        run: uv python install 3.12
+      - name: Publish | Upload to GitHub Release Assets
+        uses: python-semantic-release/publish-action@v10.5.3
+        if: steps.release.outputs.released == 'true'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.release.outputs.tag }}
 
-      - name: Semantic Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: uvx --from python-semantic-release semantic-release version
+      - name: Upload | Distribution Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: distribution-artifacts
+          path: dist
+          if-no-files-found: error
+
+    outputs:
+      released: ${{ steps.release.outputs.released || 'false' }}
+
+  deploy:
+    name: Deploy to PyPI
+    runs-on: ubuntu-latest
+    needs: release
+    if: ${{ needs.release.outputs.released == 'true' }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Setup | Download Build Artifacts
+        uses: actions/download-artifact@v4
+        id: artifact-download
+        with:
+          name: distribution-artifacts
+          path: dist
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          print-hash: true
+          verbose: true

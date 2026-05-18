@@ -13,6 +13,9 @@ dependencies = ["click>=8.0"]
 [project.scripts]
 pymrun = "pymrun.cli:main"
 
+[project.optional-dependencies]
+build = ["uv"]
+
 [dependency-groups]
 dev = ["pytest", "tox", "tox-uv", "build"]
 lint = ["ruff", "pyright"]
@@ -41,4 +44,9 @@ venv = ".venv"
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
 commit_message = "chore(release): bump version to {version}"
-build_command = ""
+build_command = """
+    python -m pip install -e '.[build]'
+    uv lock --upgrade-package "$PACKAGE_NAME"
+    git add uv.lock
+    uv build
+"""
