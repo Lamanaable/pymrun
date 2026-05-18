@@ -1,13 +1,12 @@
-"""Tests for pymrun.finder."""
 from pathlib import Path
 
 import pytest
 
 from pymrun.finder import (
+    _should_skip,
     discover_modules,
     find_project_root,
     to_module_format,
-    _should_skip,
 )
 
 

@@ -1,16 +1,14 @@
-from __future__ import annotations
-
 import contextlib
 import io
 import os
 import sys
 from pathlib import Path
 
-from click.shell_completion import get_completion_class, CompletionItem
 import click
+from click.shell_completion import CompletionItem, get_completion_class
 
-from .finder import discover_modules, find_project_root
-from .runner import run_module
+from pymrun.finder import discover_modules, find_project_root
+from pymrun.runner import run_module
 
 
 def _complete_basename(
@@ -138,7 +136,6 @@ def main(
     for ``src/utils/helper.py``).  All remaining arguments are forwarded to the
     target module.
 
-    \b
     Examples:
       pymrun myscript
       pymrun myscript -- --flag value
@@ -146,9 +143,7 @@ def main(
     if install_completion:
         detected = shell or _detect_shell()
         if detected is None:
-            raise click.ClickException(
-                "Could not detect shell. Please specify with --shell."
-            )
+            raise click.ClickException("Could not detect shell. Please specify with --shell.")
         _install_completion(detected)
         ctx.exit(0)
 
@@ -158,25 +153,29 @@ def main(
 
     root = find_project_root()
     index = discover_modules(root)
-    matches = index.get(module_name, [])
+    matches: list[str] = index.get(module_name, []) or []
 
     if not matches:
         click.echo(f"No module named '{module_name}' found under {root}.", err=True)
         raise click.Abort()
 
-    if len(matches) == 1:
-        chosen = matches[0]
-    else:
-        click.echo(f"Multiple modules named '{module_name}' found:")
-        for i, m in enumerate(matches, 1):
-            click.echo(f"  {i}. {m}")
-        choice = click.prompt(
-            "Select module",
-            type=click.IntRange(1, len(matches)),
-            default=1,
-        )
-        chosen = matches[choice - 1]
+    chosen = _select_module(matches, module_name)
 
-    extra = ctx.args
+    extra: list[str] = ctx.args
     run_module(chosen, extra)
     sys.exit(1)  # pragma: no cover
+
+
+def _select_module(matches: list[str], module_name: str) -> str:
+    if len(matches) == 1:
+        return matches[0]
+
+    click.echo(f"Multiple modules named '{module_name}' found:")
+    for i, m in enumerate(matches, 1):
+        click.echo(f"  {i}. {m}")
+    choice: int = click.prompt(
+        "Select module",
+        type=click.IntRange(1, len(matches)),
+        default=1,
+    )
+    return matches[choice - 1]

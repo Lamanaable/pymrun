@@ -1,4 +1,3 @@
-"""Shared fixtures for pymrun tests."""
 from pathlib import Path
 
 import pytest

@@ -1,4 +1,3 @@
-"""Tests for pymrun.runner."""
 import os
 
 import pytest

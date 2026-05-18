@@ -1,16 +1,16 @@
-"""Tests for pymrun.cli."""
 from pathlib import Path
 
 import click
-from click.shell_completion import CompletionItem
-from click.testing import CliRunner
 import pytest
+from click.testing import CliRunner
 
 from pymrun.cli import _complete_basename, _detect_shell, _install_completion, main
 
 
 class TestCompleteBasename:
-    def test_returns_matching_items(self, tmp_project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_returns_matching_items(
+        self, tmp_project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.chdir(tmp_project)
         ctx = click.Context(main)
         param = click.Argument(["module_name"])
@@ -19,14 +19,18 @@ class TestCompleteBasename:
         assert "main" in names
         assert "utils" not in names
 
-    def test_returns_empty_on_no_match(self, tmp_project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_returns_empty_on_no_match(
+        self, tmp_project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.chdir(tmp_project)
         ctx = click.Context(main)
         param = click.Argument(["module_name"])
         result = _complete_basename(ctx, param, "zzz")
         assert result == []
 
-    def test_returns_all_when_empty_prefix(self, tmp_project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_returns_all_when_empty_prefix(
+        self, tmp_project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.chdir(tmp_project)
         ctx = click.Context(main)
         param = click.Argument(["module_name"])
@@ -49,7 +53,9 @@ class TestDetectShell:
             ("/usr/local/bin/fish", "fish"),
         ],
     )
-    def test_from_shell_env(self, env_value: str, expected: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_from_shell_env(
+        self, env_value: str, expected: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("SHELL", env_value)
         monkeypatch.delenv("PSModulePath", raising=False)
         assert _detect_shell() == expected
@@ -112,7 +118,9 @@ class TestMainCLI:
         assert len(calls) == 1
         assert calls[0] == ("src.app.subpkg.main", [])
 
-    def test_prompts_default_choice(self, tmp_project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_prompts_default_choice(
+        self, tmp_project: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.chdir(tmp_project)
         calls: list[tuple[str, list[str]]] = []
 
@@ -201,7 +209,9 @@ class TestInstallCompletion:
         rc_content = fish_config.read_text()
         assert 'source "' + str(script_path) + '"' in rc_content
 
-    def test_skips_duplicate_rc_entry(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_skips_duplicate_rc_entry(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         fake_home = tmp_path / "home"
         fake_home.mkdir()
         monkeypatch.setattr(Path, "home", lambda: fake_home)

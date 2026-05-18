@@ -1,13 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "pymrun"
 version = "0.1.0"
 description = "Fuzzy Python module runner for uv"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
 dependencies = ["click>=8.0"]
 
 [project.scripts]
 pymrun = "pymrun.cli:main"
 
 [dependency-groups]
-dev = ["pytest"]
+dev = ["pytest", "tox", "tox-uv", "build"]
+lint = ["ruff", "pyright"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+pythonVersion = "3.10"
+include = ["pymrun"]
+strict = ["pymrun"]
+venvPath = "."
+venv = ".venv"
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+commit_message = "chore(release): bump version to {version}"
+build_command = ""
