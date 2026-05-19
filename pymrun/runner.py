@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 
 
@@ -19,3 +21,7 @@ def run_module(
     ]
 
     os.execvp("uv", cmd)
+
+
+if __name__ == "__main__":
+    print("hello")

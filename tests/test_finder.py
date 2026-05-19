@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import pytest
 
 from pymrun.finder import (
-    _should_skip,
+    _should_skip_dir,
+    _should_skip_file,
+    discover_module_basenames,
     discover_modules,
     find_project_root,
     to_module_format,
@@ -38,24 +42,37 @@ class TestFindProjectRoot:
         assert find_project_root(None) == tmp_path
 
 
-class TestShouldSkip:
+class TestShouldSkipDir:
     @pytest.mark.parametrize(
-        "path,expected",
+        "name,expected",
         [
-            (Path("src/main.py"), False),
-            (Path(".hidden/secret.py"), True),
-            (Path("venv/fake.py"), True),
-            (Path("__pycache__/cached.py"), True),
-            (Path("dist/setup.py"), True),
-            (Path("build/compile.py"), True),
-            (Path("node_modules/index.py"), True),
-            (Path(".git/hooks/pre-commit.py"), True),
-            (Path("repo/src/main.py"), False),
-            (Path("repo/.secret/stuff.py"), True),
+            ("src", False),
+            (".hidden", True),
+            ("venv", True),
+            ("__pycache__", True),
+            ("dist", True),
+            ("build", True),
+            ("node_modules", True),
+            (".git", True),
+            ("repo", False),
+            (".secret", True),
         ],
     )
-    def test_should_skip(self, path: Path, expected: bool) -> None:
-        assert _should_skip(path) is expected
+    def test_should_skip_dir(self, name: str, expected: bool) -> None:
+        assert _should_skip_dir(name) is expected
+
+
+class TestShouldSkipFile:
+    @pytest.mark.parametrize(
+        "name,expected",
+        [
+            ("main.py", False),
+            (".hidden.py", True),
+            ("fake.py", False),
+        ],
+    )
+    def test_should_skip_file(self, name: str, expected: bool) -> None:
+        assert _should_skip_file(name) is expected
 
 
 class TestToModuleFormat:
@@ -105,3 +122,29 @@ class TestDiscoverModules:
         empty.mkdir()
         index = discover_modules(empty)
         assert index == {}
+
+
+class TestDiscoverModuleBasenames:
+    def test_returns_basenames(self, tmp_project: Path) -> None:
+        basenames = discover_module_basenames(tmp_project)
+        assert "main" in basenames
+        assert "utils" in basenames
+        assert "helper" in basenames
+        assert "plain" in basenames
+        assert "test_app" in basenames
+        assert "conftest" in basenames
+
+    def test_skips_ignored_dirs(self, tmp_project: Path) -> None:
+        basenames = discover_module_basenames(tmp_project)
+        assert "fake" not in basenames  # venv/
+        assert "cached" not in basenames  # __pycache__/
+        assert "secret" not in basenames  # .hidden/
+        assert "setup" not in basenames  # dist/
+        assert "compile" not in basenames  # build/
+        assert "index" not in basenames  # node_modules/
+
+    def test_empty_project(self, tmp_path: Path) -> None:
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        basenames = discover_module_basenames(empty)
+        assert basenames == set()

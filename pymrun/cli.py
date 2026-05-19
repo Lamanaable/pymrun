@@ -1,13 +1,13 @@
-import contextlib
-import io
+from __future__ import annotations
+
 import os
 import sys
 from pathlib import Path
 
 import click
-from click.shell_completion import CompletionItem, get_completion_class
+from click.shell_completion import CompletionItem
 
-from pymrun.finder import discover_modules, find_project_root
+from pymrun.finder import discover_module_basenames, discover_modules, find_project_root
 from pymrun.runner import run_module
 
 
@@ -17,9 +17,8 @@ def _complete_basename(
     incomplete: str,
 ) -> list[CompletionItem]:
     root = find_project_root()
-    modules = discover_modules(root)
-
-    return [CompletionItem(name) for name in modules if name.startswith(incomplete)]
+    basenames = discover_module_basenames(root)
+    return [CompletionItem(name) for name in basenames if name.startswith(incomplete)]
 
 
 def _detect_shell() -> str | None:
@@ -36,6 +35,11 @@ def _detect_shell() -> str | None:
 
 
 def _install_completion(shell: str) -> None:
+    import contextlib
+    import io
+
+    from click.shell_completion import get_completion_class
+
     complete_var = "_PYMRUN_COMPLETE"
 
     prog_name = "pymrun"

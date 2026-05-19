@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import os
+from collections.abc import Iterator
 from pathlib import Path
 
 ROOT_MARKERS = ("pyproject.toml", "requirements.txt")
@@ -20,13 +24,34 @@ def find_project_root(start_path: Path | None = None) -> Path:
     return start
 
 
-def _should_skip(path: Path) -> bool:
-    for part in path.parts:
-        if part.startswith(".") and part != ".":
-            return True
-        if part in SKIP_DIRS:
-            return True
+def _should_skip_dir(name: str) -> bool:
+    if name.startswith(".") and name != ".":
+        return True
+    if name in SKIP_DIRS:
+        return True
     return False
+
+
+def _should_skip_file(name: str) -> bool:
+    if name.startswith(".") and name != ".":
+        return True
+    return False
+
+
+def _scandir_walk(root: Path) -> Iterator[Path]:
+    """Yield Path objects for ``*.py`` files under *root*."""
+    try:
+        with os.scandir(root) as it:
+            for entry in it:
+                name = entry.name
+                if entry.is_dir(follow_symlinks=False):
+                    if not _should_skip_dir(name):
+                        yield from _scandir_walk(root / name)
+                elif entry.is_file(follow_symlinks=False):
+                    if not _should_skip_file(name) and name.endswith(".py"):
+                        yield root / name
+    except PermissionError:
+        return
 
 
 def to_module_format(
@@ -44,9 +69,7 @@ def discover_modules(root: Path) -> dict[str, list[str]]:
     cache, and hidden directories.
     """
     index: dict[str, list[str]] = {}
-    for pyfile in root.rglob("*.py"):
-        if _should_skip(pyfile):
-            continue
+    for pyfile in _scandir_walk(root):
         qname = to_module_format(root, pyfile)
         basename = pyfile.stem
         index.setdefault(basename, []).append(qname)
@@ -55,3 +78,11 @@ def discover_modules(root: Path) -> dict[str, list[str]]:
         v.sort()
 
     return index
+
+
+def discover_module_basenames(root: Path) -> set[str]:
+    """Return a set of all module basenames under *root*."""
+    basenames: set[str] = set()
+    for pyfile in _scandir_walk(root):
+        basenames.add(pyfile.stem)
+    return basenames
