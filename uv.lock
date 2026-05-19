@@ -305,6 +305,23 @@ lint = [
     { name = "ruff" },
 ]
 
+[package.optional-dependencies]
+build = [
+    { name = "uv" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "build" },
+    { name = "pytest" },
+    { name = "tox" },
+    { name = "tox-uv" },
+]
+lint = [
+    { name = "pyright" },
+    { name = "ruff" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.0" },
