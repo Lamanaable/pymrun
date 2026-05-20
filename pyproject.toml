@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "pymrun"
-version = "1.0.0"
+version = "1.0.1"
 description = "Fuzzy Python module runner for uv"
 readme = "README.md"
 requires-python = ">=3.9"
